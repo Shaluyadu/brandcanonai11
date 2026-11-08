@@ -1,0 +1,36 @@
+# ---- Frontend Dockerfile (Next.js) ----
+# Use official Node 20 slim image
+FROM node:20-slim AS builder
+
+# Set working directory
+WORKDIR /app
+
+# Install pnpm (or npm) – we'll use npm that's bundled
+# Copy package files first for layer caching
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci --omit=dev
+
+# Copy the rest of the source
+COPY frontend/ .
+
+# Build the Next.js app (static assets + server files)
+RUN npm run build
+
+# ---- Runtime stage ----
+FROM node:20-slim
+WORKDIR /app
+
+# Copy only production node_modules from builder
+COPY --from=builder /app/node_modules ./node_modules
+# Copy built .next folder and other needed files
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/next.config.js ./
+COPY --from=builder /app/package.json ./
+
+# Expose the port Next.js listens on (default 3000)
+EXPOSE 3000
+
+# Start the Next.js server
+CMD ["npm", "run", "start"]
+

@@ -1,0 +1,42 @@
+services:
+  # ============================================================================
+  # 1. FastAPI Python Backend Service
+  # ============================================================================
+  - type: web
+    name: brandcanon-backend
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt && alembic upgrade head && python seed.py
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: DATABASE_URL
+        value: sqlite:///./brandcanon.db
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PYTHON_VERSION
+        value: 3.11.9
+
+  # ============================================================================
+  # 2. Next.js Frontend Service
+  # ============================================================================
+  - type: web
+    name: brandcanon-frontend
+    runtime: node
+    plan: free
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 20.18.0
+      - key: BACKEND_URL
+        fromService:
+          type: web
+          name: brandcanon-backend
+          property: host
+
